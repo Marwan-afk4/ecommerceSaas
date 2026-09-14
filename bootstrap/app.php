@@ -12,7 +12,22 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->redirectGuestsTo(fn (Request $request): string => $request->is('superadmin*')
+            ? route('superadmin.login')
+            : route('login'));
+        $middleware->redirectUsersTo(function (Request $request): string {
+            $user = $request->user();
+
+            if ($user?->is_platform_admin) {
+                return route('superadmin.dashboard');
+            }
+
+            if ($user?->shops()->active()->exists()) {
+                return route('shop.dashboard');
+            }
+
+            return route('home');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
